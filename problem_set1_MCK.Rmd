@@ -1,0 +1,122 @@
+---
+title: "Data Exercise 1"
+author: "Monica Komer"
+date: \today
+output: 
+  pdf_document:
+header-includes:
+  ## Add any Latex packages you need (or use a preamble/template)
+   - \usepackage{times} ## just a font package 
+   - \usepackage{setspace} ## spacing text 
+---
+
+```{r setup, include=FALSE}
+## Sets defaults for R chunks
+knitr::opts_chunk$set(echo = TRUE, # echo = TRUE means that your code will show
+                      warning=FALSE,
+                      message=FALSE,
+                      # fig.path='Figs/', ## where to save figures
+                      fig.height = 3,
+                      fig.width = 3,
+                      fig.align = 'center')
+
+## Add any R packages you require. 
+## Here are some we will use in 811:
+requires <- c("tidyverse", # tidyverse includes dplyr and ggplot2
+              "magrittr",
+              "foreign",
+              "readstata13",
+              "here")
+
+## Install any you don't have
+to_install <- c(requires %in% rownames(installed.packages()) == FALSE)
+install.packages(c(requires[to_install], "NA"), repos = "https://cloud.r-project.org/" )
+
+## Load all required R packages
+library(tidyverse)
+library(ggplot2); theme_set(theme_bw())
+library(magrittr)
+library(here)
+```
+<!-- The above header sets everything up. -->
+
+```{}
+net install PS813_EX1, from(https://faculty.polisci.wisc.edu/weimer/)
+
+PS813_EX1 0720
+
+save "EX1.dta"
+```
+
+
+# 1. A plot of Legislative Activity by Terms in Office
+
+```{r plot_variables}
+d <- readstata13::read.dta13(here("data/EX1.dta"))
+ggplot(d, aes(y = Leg_Act, x = terms)) + 
+  geom_point()
+```
+
+```{r correlation_variables}
+corXY <- cor(d$Leg_Act, d$terms)
+corXY
+```
+The correlation between Legislative Activity and Terms in Office is `r corXY`.
+
+# 2. Estimating linear regression
+```{r regression}
+model <- lm(d$Leg_Act ~ d$terms)
+summary(model)
+alpha <- model$coefficients[1]
+beta <- model$coefficients[2]
+```
+Regression coefficients: $\alpha$ = `r alpha` and $\beta$ = `r beta`
+
+# 3. Computing residuals
+```{r residuals}
+
+p_Leg_Act <- predict(model)
+
+resid <- d$Leg_Act - p_Leg_Act
+```
+
+# 4. Plot of Residuals
+```{r plot_residuals, fig.width = 5}
+ggplot(d, aes(y = resid, x = terms)) + 
+  geom_point() + 
+  geom_hline(yintercept = 0) +
+  geom_col(alpha = .1, width = .1, position = "dodge") +
+  labs(title = "Residuals (Observed - Predicted Legislative Activity)",
+       x = "Terms in Office",
+       y = "Residuals")
+```
+
+# 5. $Cor(Y,\hat{Y})$
+```{r correlation_observed_predicted}
+
+correlation <- cor(d$Leg_Act, p_Leg_Act)
+```
+$Cor(Y,\hat{Y})$ = `r correlation`
+
+# 6. $Cor(Y,\hat{Y})^2$ vs. $R^2$.
+```{r correlation_vs_R2}
+ 
+r2 <- summary(model)$r.squared
+```
+$R^2$ = `r r2`
+
+# 7. Hypothesis test
+\Large
+\doublespacing
+
+The null hypothesis, $H_0: \beta = 0$, and the alternative hypothesis, $H_a: \beta \neq 0$, are tested in the linear regression above. The p-value associated with the `term` coefficient in the linear regression above is larger than 0.05. This indicates that the number of terms in office is not statistically significant. For this reason, there is not enough evidence to accept the alternative hypothesis and I fail to reject the null hypothesis that the number of terms in office has no statistically significant relationship to legislative activity.   
+
+
+# 8. Discussion
+\Large
+\doublespacing
+The results above indicate that $\alpha$ = `r alpha` and $\beta$ = `r beta`. The intercept is `r alpha`, meaning that legislative acitivity is, on average, `r alpha` when the number of terms in office is 0.The slope is `r beta`, which indicates that each additional term in office is associated with a change of `r beta` on the index of legislative activity among state assembly members. While this seems to imply a negative relationship between the number of terms in office and legislative activity, the results from the linear regression do \textit{not} provide sufficient evidence to accept the altnernative hypothesis that the number of terms impacts legislative activity. The p-value on the `term` coefficient is 0.3036, which is larger than 0.05. I therefore, fail to reject the null hypothesis.  
+
+
+
+
