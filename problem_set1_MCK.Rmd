@@ -118,5 +118,8 @@ The null hypothesis, $H_0: \beta = 0$, and the alternative hypothesis, $H_a: \be
 The results above indicate that $\alpha$ = `r alpha` and $\beta$ = `r beta`. The intercept is `r alpha`, meaning that legislative acitivity is, on average, `r alpha` when the number of terms in office is 0.The slope is `r beta`, which indicates that each additional term in office is associated with a change of `r beta` on the index of legislative activity among state assembly members. While this seems to imply a negative relationship between the number of terms in office and legislative activity, the results from the linear regression do \textit{not} provide sufficient evidence to accept the altnernative hypothesis that the number of terms impacts legislative activity. The p-value on the `term` coefficient is 0.3036, which is larger than 0.05. I therefore, fail to reject the null hypothesis.  
 
 
-
+<!-- 
+This all looks great, only one note: for inline p-value on the 2nd coeficient: `r summary(leg_mod)$coefficients[,4][2]`
+Not pretty, but better than risking a typo!
+-->
 
