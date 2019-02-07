@@ -63,7 +63,13 @@ Various regression models including hierarchical models, survey experiments, tex
 
 - Tunisia Election Data (results by district available [here](http://tunisiaelectiondata.com/) )
 
-
+<!--Monica,
+These all look like great options. They probably all have stable URLs, so you can load the data right from the web. If they are large, you'll want to make a script that loads it, trims it down, and saves a smaller version to your /data subfoler. Two more thoughts:
+- It seems like your questions will require you to merge (i.e. join() )  some of these data. Consider how standardized the columns you may joining on are. 
+- Spatial graphs seem helpful. I did not dig in deep enough to see how things are spatially indexed. I know the world package will get you country maps, but subnational jurisdictions may require using raster / GIS. Entirely up to you how far down this road you want to go, if at all, but I thought I would mention it. 
+Best,
+Devin 
+-->
 
 
 
