@@ -63,14 +63,67 @@ Various regression models including hierarchical models, survey experiments, tex
 
 - Tunisia Election Data (results by district available [here](http://tunisiaelectiondata.com/) )
 
-<!--Monica,
-These all look like great options. They probably all have stable URLs, so you can load the data right from the web. If they are large, you'll want to make a script that loads it, trims it down, and saves a smaller version to your /data subfoler. Two more thoughts:
-- It seems like your questions will require you to merge (i.e. join() )  some of these data. Consider how standardized the columns you may joining on are. 
-- Spatial graphs seem helpful. I did not dig in deep enough to see how things are spatially indexed. I know the world package will get you country maps, but subnational jurisdictions may require using raster / GIS. Entirely up to you how far down this road you want to go, if at all, but I thought I would mention it. 
-Best,
-Devin 
--->
 
+---
+
+### Something cool
+
+Using Arab Barometer data to evaluate attitudes towards female leaders. In particular, I evaluate respondent's attitudes regarding whether "men are better at political leadership than women":
+
+```{r ABIV_data}
+#loading data
+d <- read.csv(here("data/ABIV_English_subset.csv"))
+
+#naming things and recoding leader variable (so higher values indicate more gender egalitarian views)
+d$leader <- as.numeric(d$q6013)
+d$leader[as.numeric(d$q6013) == 3] <- 2
+d$leader[as.numeric(d$q6013) == 4] <- 3
+d$leader[as.numeric(d$q6013) == 5] <- 1
+d$leader[as.numeric(d$q6013) == 6] <- 4
+d$leader[as.numeric(d$q6013) < 3] <- NA
+
+
+d$female <- as.numeric(d$q1002)
+d$female[as.numeric(d$q1002) == 2] <- 0
+d$female <- as.factor(d$female)
+
+#age by category
+d$age_cat <- as.numeric(d$q1001)
+d$age_cat[as.numeric(d$q1001) == 74] <- NA
+d$age_cat[as.numeric(d$q1001) < 8] <- 1
+d$age_cat[as.numeric(d$q1001) > 7 & as.numeric(d$q1001) < 18] <- 2
+d$age_cat[as.numeric(d$q1001) > 17 & as.numeric(d$q1001) < 28] <- 3
+d$age_cat[as.numeric(d$q1001) > 27 & as.numeric(d$q1001) < 38] <- 4
+d$age_cat[as.numeric(d$q1001) > 37 & as.numeric(d$q1001) < 48] <- 5
+d$age_cat[as.numeric(d$q1001) > 47 & as.numeric(d$q1001) < 74] <- 6
+
+
+```
+
+```{r additional vars, include=FALSE}
+d %>%
+  group_by(female) %>% 
+  mutate(leader_meanf = mean(leader, na.rm = TRUE))
+
+head(d$leader_meanf)
+
+```
+<!-- Unclear what I'm doing wrong in the chunk of code above. Trying to make a var that is the mean response by gender. -->
+
+
+Mean response by gender and age with higher values indicating more gender egalitarian views (i.e., less supportive of the statement that "men are better at political leadership than women"):
+```{r means}
+
+#Mean response by gender
+d %>%
+  group_by(female) %>% summarise(leader = mean(leader, na.rm=TRUE))
+
+
+#Mean response by age
+d %>%
+  group_by(age_cat) %>% summarise(leader = mean(leader, na.rm=TRUE))
+
+```
 
 
 
