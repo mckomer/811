@@ -82,10 +82,24 @@ d$leader[as.numeric(d$q6013) == 5] <- 1
 d$leader[as.numeric(d$q6013) == 6] <- 4
 d$leader[as.numeric(d$q6013) < 3] <- NA
 
+# a little shorter with dplyr
+d$leader %<>% 
+  recode(`3` = 2,
+         `4` = 3,
+         `5` = 1,
+         `6` = 4,
+         .default = NaN) # numeric double so NaN, if character this would be NA
+
 
 d$female <- as.numeric(d$q1002)
+
 d$female[as.numeric(d$q1002) == 2] <- 0
-d$female <- as.factor(d$female)
+
+# or with dplyr:
+d$female %<>% recode(`1` = 1, `2`= 0)
+
+d$female <- as.factor(d$female) 
+# Unless you really like working with factors, you could probably skip this by importing with strings.as.factors = FALSE, and let R coerce to factor only need needed.
 
 #age by category
 d$age_cat <- as.numeric(d$q1001)
@@ -97,19 +111,27 @@ d$age_cat[as.numeric(d$q1001) > 27 & as.numeric(d$q1001) < 38] <- 4
 d$age_cat[as.numeric(d$q1001) > 37 & as.numeric(d$q1001) < 48] <- 5
 d$age_cat[as.numeric(d$q1001) > 47 & as.numeric(d$q1001) < 74] <- 6
 
-
+# this could also be done with mutate(age_cat = ifelse()) or case_when()
+# more importanly, why not make these strings? "<8" "8-27" etc.
+# If you are using it as an ordered variable in a model, I understand, but you may want a discriptive one for figures and discriptive stats. The results of summarize below would be more clear and will be easier to plot if you just use text labels (gender was already labeled, just being imported as a factor)
 ```
 
 ```{r additional vars, include=FALSE}
-d %>%
+d %<>%
   group_by(female) %>% 
   mutate(leader_meanf = mean(leader, na.rm = TRUE))
 
-head(d$leader_meanf)
-
+head(d$leader_meanf) # notice how there are only 2 values
 ```
 <!-- Unclear what I'm doing wrong in the chunk of code above. Trying to make a var that is the mean response by gender. -->
 
+<!-- The pipe was only going one way %>%, so it was failing to alter d. You wanted not just to pipe d into those functions, but also redefine d as the resullt, i.e.  d %<>%, which is equivilant to d <- d %>%
+
+However, this variable only has two values (only two genders represented in theses data), so it may not be worth it in this case.
+Glad you left a note! 
+-->
+
+The mean level of support among women is `r round(mean(d$leader[d$female==1], na.rm = T),2 )`, and among men it is `r round( mean(d$leader[d$female==0], na.rm = T),2 )`.
 
 Mean response by gender and age with higher values indicating more gender egalitarian views (i.e., less supportive of the statement that "men are better at political leadership than women"):
 ```{r means}
@@ -118,6 +140,10 @@ Mean response by gender and age with higher values indicating more gender egalit
 d %>%
   group_by(female) %>% summarise(leader = mean(leader, na.rm=TRUE))
 
+# Without recoding the gender variable
+d %>%
+  group_by(q1002) %>% summarise(leader = mean(leader, na.rm=TRUE))
+
 
 #Mean response by age
 d %>%
@@ -125,5 +151,17 @@ d %>%
 
 ```
 
+```{r age-histogram, fig.width=8}
+# Obviously this could benifit from better names and labels, but maybe you'll find it useful.
+d %>% 
+  mutate(age = as.numeric(q1001),
+         gender = q1002) %>% 
+  mutate(agree = ifelse(str_detect(q6013," agree"), "Agree", NA)) %>%
+  mutate(agree = ifelse(str_detect(q6013,"disagree"), "Disagree", agree)) %>%
+  filter(!is.na(agree) ) %>%
+  ggplot() +
+  aes(x = age, fill = q6013) +
+  geom_histogram(binwidth = 10) + facet_grid(gender ~ agree)
+```
 
 
