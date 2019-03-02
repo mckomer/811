@@ -32,6 +32,7 @@ library(tidyverse)
 library(ggplot2); theme_set(theme_minimal())
 library(magrittr)
 library(here)
+library(dplyr)
 ```
 
 
@@ -82,86 +83,111 @@ d$leader[as.numeric(d$q6013) == 5] <- 1
 d$leader[as.numeric(d$q6013) == 6] <- 4
 d$leader[as.numeric(d$q6013) < 3] <- NA
 
-# a little shorter with dplyr
-d$leader %<>% 
+
+d$female <- as.numeric(d$q1002)
+d$female[as.numeric(d$q1002) == 2] <- 0
+
+
+
+```
+<!-- When I run the code you recommended: d$leader %<>% 
   recode(`3` = 2,
          `4` = 3,
          `5` = 1,
          `6` = 4,
-         .default = NaN) # numeric double so NaN, if character this would be NA
-
-
-d$female <- as.numeric(d$q1002)
-
-d$female[as.numeric(d$q1002) == 2] <- 0
-
-# or with dplyr:
+         .default = NaN) 
+or 
 d$female %<>% recode(`1` = 1, `2`= 0)
+I get an error: "No applicable method for 'recode' applied to an object of class "NULL".-->
 
-d$female <- as.factor(d$female) 
-# Unless you really like working with factors, you could probably skip this by importing with strings.as.factors = FALSE, and let R coerce to factor only need needed.
 
-#age by category
-d$age_cat <- as.numeric(d$q1001)
-d$age_cat[as.numeric(d$q1001) == 74] <- NA
-d$age_cat[as.numeric(d$q1001) < 8] <- 1
-d$age_cat[as.numeric(d$q1001) > 7 & as.numeric(d$q1001) < 18] <- 2
-d$age_cat[as.numeric(d$q1001) > 17 & as.numeric(d$q1001) < 28] <- 3
-d$age_cat[as.numeric(d$q1001) > 27 & as.numeric(d$q1001) < 38] <- 4
-d$age_cat[as.numeric(d$q1001) > 37 & as.numeric(d$q1001) < 48] <- 5
-d$age_cat[as.numeric(d$q1001) > 47 & as.numeric(d$q1001) < 74] <- 6
-
-# this could also be done with mutate(age_cat = ifelse()) or case_when()
-# more importanly, why not make these strings? "<8" "8-27" etc.
-# If you are using it as an ordered variable in a model, I understand, but you may want a discriptive one for figures and discriptive stats. The results of summarize below would be more clear and will be easier to plot if you just use text labels (gender was already labeled, just being imported as a factor)
-```
-
-```{r additional vars, include=FALSE}
-d %<>%
-  group_by(female) %>% 
-  mutate(leader_meanf = mean(leader, na.rm = TRUE))
-
-head(d$leader_meanf) # notice how there are only 2 values
-```
-<!-- Unclear what I'm doing wrong in the chunk of code above. Trying to make a var that is the mean response by gender. -->
-
-<!-- The pipe was only going one way %>%, so it was failing to alter d. You wanted not just to pipe d into those functions, but also redefine d as the resullt, i.e.  d %<>%, which is equivilant to d <- d %>%
-
-However, this variable only has two values (only two genders represented in theses data), so it may not be worth it in this case.
-Glad you left a note! 
--->
-
-The mean level of support among women is `r round(mean(d$leader[d$female==1], na.rm = T),2 )`, and among men it is `r round( mean(d$leader[d$female==0], na.rm = T),2 )`.
-
-Mean response by gender and age with higher values indicating more gender egalitarian views (i.e., less supportive of the statement that "men are better at political leadership than women"):
+Mean response by gender and country with higher values indicating more gender egalitarian views (i.e., less supportive of the statement that "men are better at political leadership than women"):
 ```{r means}
 
 #Mean response by gender
 d %>%
   group_by(female) %>% summarise(leader = mean(leader, na.rm=TRUE))
 
-# Without recoding the gender variable
-d %>%
-  group_by(q1002) %>% summarise(leader = mean(leader, na.rm=TRUE))
 
 
-#Mean response by age
+#Mean response by country
 d %>%
-  group_by(age_cat) %>% summarise(leader = mean(leader, na.rm=TRUE))
+  group_by(country) %>% summarise(leader = mean(leader, na.rm=TRUE))
 
 ```
 
+Plotting responses by age and gender: 
 ```{r age-histogram, fig.width=8}
 # Obviously this could benifit from better names and labels, but maybe you'll find it useful.
 d %>% 
   mutate(age = as.numeric(q1001),
          gender = q1002) %>% 
-  mutate(agree = ifelse(str_detect(q6013," agree"), "Agree", NA)) %>%
-  mutate(agree = ifelse(str_detect(q6013,"disagree"), "Disagree", agree)) %>%
+  mutate(agree = ifelse(str_detect(q6013,"agree"), "Agree", NA)) %>%
+  mutate(agree = ifelse(str_detect(q6013, "disagree"), "Disagree", agree)) %>%
   filter(!is.na(agree) ) %>%
   ggplot() +
   aes(x = age, fill = q6013) +
+  labs(x= "Age", y = "Number of Respondents", fill = "Response") +
   geom_histogram(binwidth = 10) + facet_grid(gender ~ agree)
 ```
 
+
+It may also be useful to compare countries. Here is a bar plot representing the mean response by country (with larger values indicating more gender egalitarian attitudes).
+
+```{r Country-Bar, fig.width=8}
+d %>%
+  group_by(country) %>%
+  mutate(leader_m = mean(leader, na.rm= TRUE)) %>%
+  distinct(country, leader_m) %>%
+  ggplot() + 
+  aes(x = reorder(country, leader_m), y = leader_m) +
+  labs(x= "Country", y="Mean Response") +
+  geom_bar(stat= "identity")
+```
+
+
+We can also visualize the mean response by gender and country:
+```{r Country and Gender-Bar, fig.width=8}
+d %>%
+  mutate(gender = q1002) %>%
+  group_by(country, gender) %>%
+  mutate(leader_m = mean(leader, na.rm= TRUE)) %>%
+  distinct(country, leader_m) %>%
+  ggplot() + 
+  aes(x = reorder(country, leader_m), y = leader_m, fill = gender) +
+  labs(x= "Country", y="Mean Response") +
+  geom_bar(stat= "identity")
+```
+
+
+An alternative, and somewhat easier, way to visualize the gender gap in attitudes towards female leaders:
+```{r Gender Gap-Bar, fig.width=8}
+d %>%
+  mutate(gender = q1002) %>%
+  group_by(country, gender) %>%
+  mutate(leader_m = mean(leader, na.rm= TRUE)) %>%
+  distinct(country, leader_m) %>%
+  ggplot() +
+  geom_point() +
+  aes(y = reorder(country, leader_m), x = leader_m, color = gender) +
+  labs(y= "Country", x="Mean Response")
+```
+
+
+```{r CountryGender Gap-Bar, fig.width=8, eval= FALSE}
+d %>%
+  mutate(gender = q1002) %>%
+  group_by(country, gender) %>%
+  mutate(leader_m = mean(leader, na.rm= TRUE)) %>%
+  distinct(country, leader_m) %>%
+  ggplot() + 
+  geom_point() +
+  aes(y = reorder(country, leader_m), x = leader_m, color = gender) +
+  labs(y= "Country", x="Mean Response") +
+  geom_segment(aes(x = min, 
+                   xend = max, 
+                   y = country
+                   yend = country) )
+```
+<!-- Devin, in the chunk above, I'm trying to add a distance line (from Male to Female) for each country. I'm running into an error when I include the geom_segment() code.-->
 
