@@ -171,7 +171,7 @@ d %>%
   ggplot() +
   geom_point() +
   aes(y = reorder(country, leader_m), x = leader_m, color = gender) +
-  labs(y= "Country", x="Mean Response\n(Least to Most Supportive)", title= "Attitudes Towards Female Leaders")
+  labs(y= "Country", x="Mean Response\n(Least to Most Supportive)", title= " Gender Gap in Attitudes Towards Female Leaders")
 ```
 <!-- Devin, in the chunk above, I tried to put "Least Supportive" and "Most Supportive" under the min and max points under the x axis, but ran into trouble. Is there an easy way to do this? Also in the chunk below, I got an error when I tried to add a distance line.-->
 
