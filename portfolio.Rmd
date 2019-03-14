@@ -161,7 +161,8 @@ d %>%
 
 
 An alternative, and somewhat easier, way to visualize the gender gap in attitudes towards female leaders:
-```{r Gender Gap-Bar, fig.width=8}
+```{r Gender Gap-plot, fig.width=8}
+
 d %>%
   mutate(gender = q1002) %>%
   group_by(country, gender) %>%
@@ -170,11 +171,13 @@ d %>%
   ggplot() +
   geom_point() +
   aes(y = reorder(country, leader_m), x = leader_m, color = gender) +
-  labs(y= "Country", x="Mean Response")
+  labs(y= "Country", x="Mean Response\n(Least to Most Supportive)", title= "Attitudes Towards Female Leaders")
 ```
+<!-- Devin, in the chunk above, I tried to put "Least Supportive" and "Most Supportive" under the min and max points under the x axis, but ran into trouble. Is there an easy way to do this? Also in the chunk below, I got an error when I tried to add a distance line.-->
 
 
-```{r CountryGender Gap-Bar, fig.width=8, eval= FALSE}
+
+```{r CountryGender Gap-plot, fig.width=8, eval= FALSE}
 d %>%
   mutate(gender = q1002) %>%
   group_by(country, gender) %>%
@@ -190,4 +193,8 @@ d %>%
                    yend = country) )
 ```
 <!-- Devin, in the chunk above, I'm trying to add a distance line (from Male to Female) for each country. I'm running into an error when I include the geom_segment() code.-->
+
+
+
+
 
