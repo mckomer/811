@@ -67,13 +67,19 @@ Various regression models including hierarchical models, survey experiments, tex
 
 ---
 
-### Something cool
+### Data Visualization
 
-Using Arab Barometer data to evaluate attitudes towards female leaders. In particular, I evaluate respondent's attitudes regarding whether "men are better at political leadership than women":
+### Is there a gender gap in attitudes towards female politicians? Do attitudes vary by country?
+
+Using Arab Barometer data to evaluate attitudes towards female leaders: 
 
 ```{r ABIV_data}
-#loading data
 d <- read.csv(here("data/ABIV_English_subset.csv"))
+``` 
+
+I evaluate responses to the statement: "men are better at political leadership than women." I recode this variable:
+
+```{r ABIV_vars}
 
 #naming things and recoding leader variable (so higher values indicate more gender egalitarian views)
 d$leader <- as.numeric(d$q6013)
@@ -118,7 +124,6 @@ d %>%
 
 Plotting responses by age and gender: 
 ```{r age-histogram, fig.width=8}
-# Obviously this could benifit from better names and labels, but maybe you'll find it useful.
 d %>% 
   mutate(age = as.numeric(q1001),
          gender = q1002) %>% 
@@ -127,27 +132,27 @@ d %>%
   filter(!is.na(agree) ) %>%
   ggplot() +
   aes(x = age, fill = q6013) +
-  labs(x= "Age", y = "Number of Respondents", fill = "Response") +
+  labs(x= "Age", y = "Number of Respondents", fill = "Response", title= "Agreement with ''Men are better at political leadership'' ") +
   geom_histogram(binwidth = 10) + facet_grid(gender ~ agree)
 ```
 
 
-It may also be useful to compare countries. Here is a bar plot representing the mean response by country (with larger values indicating more gender egalitarian attitudes).
 
-```{r Country-Bar, fig.width=8}
+
+```{r Country-Histogram, fig.width=8, eval=FALSE}
 d %>%
   group_by(country) %>%
   mutate(leader_m = mean(leader, na.rm= TRUE)) %>%
   distinct(country, leader_m) %>%
   ggplot() + 
   aes(x = reorder(country, leader_m), y = leader_m) +
-  labs(x= "Country", y="Mean Response") +
-  geom_bar(stat= "identity")
+  labs(x= "Country", y="Mean Response", title= "Attitudes Towards Female Leaders") +
+  geom_histogram(binwidth= 15, stat= "identity")
 ```
 
 
-We can also visualize the mean response by gender and country:
-```{r Country and Gender-Bar, fig.width=8}
+We can also visualize the mean response by gender and country (with larger values indicating more gender egalitarian attitudes):
+```{r Gender-Histogram, fig.width=8}
 d %>%
   mutate(gender = q1002) %>%
   group_by(country, gender) %>%
@@ -155,8 +160,8 @@ d %>%
   distinct(country, leader_m) %>%
   ggplot() + 
   aes(x = reorder(country, leader_m), y = leader_m, fill = gender) +
-  labs(x= "Country", y="Mean Response") +
-  geom_bar(stat= "identity")
+  labs(x= "Country", y="Mean Response", title="Attitudes Towards Female Leaders") +
+  geom_histogram(binwidth=8, stat= "identity")
 ```
 
 
@@ -171,13 +176,13 @@ d %>%
   ggplot() +
   geom_point() +
   aes(y = reorder(country, leader_m), x = leader_m, color = gender) +
-  labs(y= "Country", x="Mean Response\n(Least to Most Supportive)", title= " Gender Gap in Attitudes Towards Female Leaders")
+  labs(y=" " ,x="Mean Response\n(Least to Most Supportive)", title= " Gender Gap in Attitudes Towards Female Leaders", color = "Gender")
 ```
 <!-- Devin, in the chunk above, I tried to put "Least Supportive" and "Most Supportive" under the min and max points under the x axis, but ran into trouble. Is there an easy way to do this? Also in the chunk below, I got an error when I tried to add a distance line.-->
 
 
 
-```{r CountryGender Gap-plot, fig.width=8, eval= FALSE}
+```{r Gap-plot, fig.width=8, eval= FALSE}
 d %>%
   mutate(gender = q1002) %>%
   group_by(country, gender) %>%
