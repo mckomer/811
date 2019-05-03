@@ -33,6 +33,14 @@ library(ggplot2); theme_set(theme_minimal())
 library(magrittr)
 library(here)
 library(dplyr)
+library(sjmisc)
+library(sjlabelled)
+library(sjPlot)
+library(sjstats)
+library(ggeffects)
+library(texreg)
+library(broom)
+library(lme4)
 ```
 
 
@@ -178,28 +186,133 @@ d %>%
   aes(y = reorder(country, leader_m), x = leader_m, color = gender) +
   labs(y=" " ,x="Mean Response\n(Least to Most Supportive)", title= " Gender Gap in Attitudes Towards Female Leaders", color = "Gender")
 ```
-<!-- Devin, in the chunk above, I tried to put "Least Supportive" and "Most Supportive" under the min and max points under the x axis, but ran into trouble. Is there an easy way to do this? Also in the chunk below, I got an error when I tried to add a distance line.-->
 
 
 
-```{r Gap-plot, fig.width=8, eval= FALSE}
+```{r Gap-plot, fig.width=8}
 d %>%
   mutate(gender = q1002) %>%
   group_by(country, gender) %>%
   mutate(leader_m = mean(leader, na.rm= TRUE)) %>%
   distinct(country, leader_m) %>%
   ggplot() + 
-  geom_point() +
-  aes(y = reorder(country, leader_m), x = leader_m, color = gender) +
+  geom_point(aes(color=gender)) +
+  aes(y = reorder(country, leader_m), x = leader_m) +
   labs(y= "Country", x="Mean Response") +
-  geom_segment(aes(x = min, 
-                   xend = max, 
-                   y = country
-                   yend = country) )
+  geom_line()
 ```
-<!-- Devin, in the chunk above, I'm trying to add a distance line (from Male to Female) for each country. I'm running into an error when I include the geom_segment() code.-->
 
 
+---
+
+### Project Presentation
+
+### Effects of Women's Representation on Public Opinion
+
+Using Arab Barometer survey data and data from Tunisia's 2014 parliamentary elections: 
+
+```{r ABTun data}
+abIV <- read.csv(here("data/ABIV_English_subset.csv"))
+elect <- read.csv(here("Data/TUN2014PAR_Gov.csv"))
+``` 
+
+Merging and recoding the data:
+
+```{r merging}
+abIV <- read.csv(here("data/ABIV_English_subset.csv"))
+elect <- read.csv(here("Data/TUN2014PAR_Gov.csv"))
+
+abTun <- filter(abIV, country =="Tunisia")
+abTun$governorate<- as.character(abTun$q1)
+
+abtun<- full_join(abTun, elect, by= "governorate") 
+
+#creating variable to measure gender egalitarianism
+abtun$leader <- as.numeric(abtun$q6013)
+
+abtun$leader %<>%  # reorder so higher values mean more gender egal
+  recode('5' = 1, #strongly agree
+         '3' = 2,
+         '2' = 3,
+         '4' = 4,
+         '6' = 5,
+         .default = NaN)
 
 
+#Binary 
+abtun$leaderdi <- abtun$leader
+abtun$leaderdi %<>%
+  recode('5' = 1,
+         '4' = 1,
+         '2' = 0,
+         '1' = 0,
+         .default = NaN)
 
+#Gender Var
+abtun$female <- as.numeric(abtun$q1002)
+
+abtun$female %<>% 
+  recode('1' = 1, 
+         '2' = 0,
+         .default = NaN)
+
+``` 
+
+Plotting average gender egalitarian attitudes (binary measure) by women's representation across disricts: 
+
+```{r mean plot, fig.width=8, fig.height=4}
+##Plotting women's rep and avg gender egalitarian attitude by governorate
+abtun %>%
+  group_by(governorate) %>%
+  mutate(meanleaderdi = mean(leaderdi, na.rm= TRUE)) %>%
+  distinct(per_wom, meanleaderdi, governorate) %>%
+  ggplot() +
+  aes(x = meanleaderdi, y = per_wom) +
+  geom_point() +
+  geom_text(aes(label= governorate, vjust = 1)) +
+  theme_bw() +
+  geom_smooth(method=lm, se=FALSE) +
+  labs(title= "Figure 1: Gender Egalitarian Attitudes and Women's Representation by Governorate",
+       x= "Average Gender Egalitarian Attitudes",
+       y= "Percent of Female Representatives")
+```
+
+Logistic Regression with district-level fixed effects:
+
+$$ logit(y)=B_0 + B_1 * Percent Women_j + B_2 * Head Women_j + B_3 * Female_{ij} + u_j $$
+
+In this equation, the outcome variable (y) is the presence or absence of gender egalitarian attitudes. $B_0$ is the log-odds that $y=1$ when the remaining variables equal 0.  $B_1$ is the effect on log-odds of a one-unit increase in the percent of female representatives (i.e., a one percent increase) conditional on the other variables in the model and for individuals in the same district. $u_j$ is the effect of being in district $j$ on the log-odds that the outcome, gender egalitarian attitudes, equals 1.
+
+```{r logit}
+test1 <- (glmer(leaderdi ~ per_wom + headwom_di + female + (1|governorate), weights = wt,
+                data= abtun, family=binomial(link="logit")))
+
+summary(test1)
+
+
+``` 
+
+Plotting the Effect:
+```{r odds ratio, fig.width=7}
+plot_model(test1, show.values= TRUE, show.p = FALSE, vline.color = "red") +
+  labs(title = "Estimated Effect on Gender Egalitarian Attitudes")
+```
+
+Predicted Probability of women's representation on gender egalitarian attitudes with confidence bounds:
+```{r pred probability, fig.width = 8}
+plot(ggpredict(test1, terms = c("per_wom"))) +
+labs(title= "Predicted Probabilities of Gender Egalitarianism", 
+     x= "Percent of Female Representatives",
+     y= "Probability of Gender Egalitarian Attitudes")
+```
+
+
+Predicted Probability Conditional on District. Plotting this effect for a random set of 9 districts:
+```{r pred prob, fig.width=8}
+#predicted prob for random set of 7 disricts
+plot_model(test1,type="pred",
+           terms=c("per_wom","governorate [sample = 7]"),pred.type="re") +
+  labs(title= "Predicted Probabilities of Gender Egalitarian Attitudes",
+       x = "Percent of Female Representatives",
+       y= "Probability of Gender Egalitarian Attitudes")
+```
